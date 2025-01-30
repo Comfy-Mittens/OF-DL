@@ -2727,4 +2727,81 @@ public class APIHelper : IAPIHelper
         }
         return null;
     }
+
+    public async Task<Dictionary<string, Subscriptions.List>?> GetActiveSubscribed(string endpoint, bool includeRestricted, IDownloadConfig config)
+    {
+        Dictionary<string, string> getParams = new()
+        {
+            { "offset", "0" },
+            { "limit", "50" },
+            { "type", "active" },
+            { "format", "infinite"}
+        };
+
+        return await GetSubscriptions(getParams, endpoint, includeRestricted, config);
+    }
+
+    public async Task<Dictionary<string, Subscriptions.List>?> GetSubscriptions(Dictionary<string, string> getParams, string endpoint, bool includeRestricted, IDownloadConfig config)
+    {
+        try
+        {
+            Dictionary<string, Entities.Subscriptions.List> users = new();
+            Subscriptions subscriptions = new();
+
+            Log.Debug("Calling GetAllSubscrptions");
+
+            string? body = await BuildHeaderAndExecuteRequests(getParams, endpoint, new HttpClient());
+
+            subscriptions = JsonConvert.DeserializeObject<Subscriptions>(body);
+            if (subscriptions != null && subscriptions.hasMore)
+            {
+                getParams["offset"] = subscriptions.list.Count.ToString();
+
+                while (true)
+                {
+                    Subscriptions newSubscriptions = new();
+                    string? loopbody = await BuildHeaderAndExecuteRequests(getParams, endpoint, new HttpClient());
+
+                    if (!string.IsNullOrEmpty(loopbody) && (!loopbody.Contains("[]") || loopbody.Trim() != "[]"))
+                    {
+                        newSubscriptions = JsonConvert.DeserializeObject<Subscriptions>(loopbody, m_JsonSerializerSettings);
+                    }
+                    else
+                    {
+                        break;
+                    }
+
+                    subscriptions.list.AddRange(newSubscriptions.list);
+                    if (!newSubscriptions.hasMore)
+                    {
+                        break;
+                    }
+                    getParams["offset"] = subscriptions.list.Count.ToString();
+                }
+            }
+
+            foreach (Subscriptions.List subscription in subscriptions.list)
+            {
+                if ((!(subscription.isRestricted ?? false) || ((subscription.isRestricted ?? false) && includeRestricted))
+                    && !users.ContainsKey(subscription.username))
+                {
+                    users.Add(subscription.username, subscription);
+                }
+            }
+
+            return users;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Exception caught: {0}\n\nStackTrace: {1}", ex.Message, ex.StackTrace);
+            Log.Error("Exception caught: {0}\n\nStackTrace: {1}", ex.Message, ex.StackTrace);
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine("\nInner Exception:");
+                Console.WriteLine("Exception caught: {0}\n\nStackTrace: {1}", ex.InnerException.Message, ex.InnerException.StackTrace);
+                Log.Error("Inner Exception: {0}\n\nStackTrace: {1}", ex.InnerException.Message, ex.InnerException.StackTrace);
+            }
+        }
+        return null;
+    }
 }
