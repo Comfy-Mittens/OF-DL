@@ -26,6 +26,8 @@ public class APIHelper : IAPIHelper
     private static readonly JsonSerializerSettings m_JsonSerializerSettings;
     private readonly IDBHelper m_DBHelper;
     private readonly Auth auth;
+    private static DateTime? cachedDynamicRulesExpiration;
+    private static DynamicRules? cachedDynamicRules;
 
     static APIHelper()
     {
@@ -50,15 +52,38 @@ public class APIHelper : IAPIHelper
 
         DynamicRules? root;
 
-        //Get rules from GitHub and fallback to local file
-        string? dynamicRulesJSON = GetDynamicRules();
-        if (!string.IsNullOrEmpty(dynamicRulesJSON))
+        //Check if we have a cached version of the dynamic rules
+        if (cachedDynamicRules != null && cachedDynamicRulesExpiration.HasValue &&
+            DateTime.UtcNow < cachedDynamicRulesExpiration)
         {
-            root = JsonConvert.DeserializeObject<DynamicRules>(dynamicRulesJSON);
+            Log.Debug("Using cached dynamic rules");
+            root = cachedDynamicRules;
         }
         else
         {
-            root = JsonConvert.DeserializeObject<DynamicRules>(File.ReadAllText("rules.json"));
+            //Get rules from GitHub and fallback to local file
+            string? dynamicRulesJSON = GetDynamicRules();
+            if (!string.IsNullOrEmpty(dynamicRulesJSON))
+            {
+                Log.Debug("Using dynamic rules from GitHub");
+                root = JsonConvert.DeserializeObject<DynamicRules>(dynamicRulesJSON);
+
+                // Cache the GitHub response for 15 minutes
+                cachedDynamicRules = root;
+                cachedDynamicRulesExpiration = DateTime.UtcNow.AddMinutes(15);
+            }
+            else
+            {
+                Log.Debug("Using dynamic rules from local file");
+                root = JsonConvert.DeserializeObject<DynamicRules>(File.ReadAllText("rules.json"));
+
+                // Cache the dynamic rules from local file to prevent unnecessary disk
+                // operations and frequent call to GitHub. Since the GitHub dynamic rules
+                // are preferred to the local file, the cache time is shorter than when dynamic rules
+                // are successfully retrieved from GitHub.
+                cachedDynamicRules = root;
+                cachedDynamicRulesExpiration = DateTime.UtcNow.AddMinutes(5);
+            }
         }
 
         DateTimeOffset dto = (DateTimeOffset)DateTime.UtcNow;
@@ -2568,7 +2593,7 @@ public class APIHelper : IAPIHelper
     }
 
 
-    public async Task<string> GetDecryptionKey(Dictionary<string, string> drmHeaders, string licenceURL, string pssh)
+    public async Task<string> GetDecryptionKeyCDRMProject(Dictionary<string, string> drmHeaders, string licenceURL, string pssh)
     {
         Log.Debug("Calling GetDecryptionKey");
 
@@ -2653,9 +2678,57 @@ public class APIHelper : IAPIHelper
         return null;
     }
 
-    public async Task<string> GetDecryptionKeyNew(Dictionary<string, string> drmHeaders, string licenceURL, string pssh)
+    public async Task<string> GetDecryptionKeyOFDL(Dictionary<string, string> drmHeaders, string licenceURL, string pssh)
     {
-        Log.Debug("Calling GetDecryptionKeyNew");
+        Log.Debug("Calling GetDecryptionOFDL");
+
+
+        try
+        {
+            string dcValue = string.Empty;
+            HttpClient client = new();
+
+            OFDLRequest ofdlRequest = new OFDLRequest
+            {
+                PSSH = pssh,
+                LicenseURL = licenceURL,
+                Headers = JsonConvert.SerializeObject(drmHeaders)
+            };
+
+            string json = JsonConvert.SerializeObject(ofdlRequest);
+
+            Log.Debug($"Posting to ofdl.tools: {json}");
+
+            HttpRequestMessage request = new(HttpMethod.Post, "https://ofdl.tools/WV")
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+
+            using var response = await client.SendAsync(request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                string body = await response.Content.ReadAsStringAsync();
+                return body;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Exception caught: {0}\n\nStackTrace: {1}", ex.Message, ex.StackTrace);
+            Log.Error("Exception caught: {0}\n\nStackTrace: {1}", ex.Message, ex.StackTrace);
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine("\nInner Exception:");
+                Console.WriteLine("Exception caught: {0}\n\nStackTrace: {1}", ex.InnerException.Message, ex.InnerException.StackTrace);
+                Log.Error("Inner Exception: {0}\n\nStackTrace: {1}", ex.InnerException.Message, ex.InnerException.StackTrace);
+            }
+        }
+        return null;
+    }
+
+    public async Task<string> GetDecryptionKeyCDM(Dictionary<string, string> drmHeaders, string licenceURL, string pssh)
+    {
+        Log.Debug("Calling GetDecryptionKeyCDM");
 
         try
         {
@@ -2674,7 +2747,7 @@ public class APIHelper : IAPIHelper
             List<ContentKey> keys = cdm.GetKeys();
             if (keys.Count > 0)
             {
-                Log.Debug($"GetDecryptionKeyNew Key: {keys[0].ToString()}");
+                Log.Debug($"GetDecryptionKeyCDM Key: {keys[0].ToString()}");
                 return keys[0].ToString();
             }
         }
