@@ -794,7 +794,6 @@ public class Program
                     report.GenerateReport(reportPath);
                 }
             }
-            Dictionary<string, int> activeSubs = await m_ApiHelper.GetActiveSubscriptions("/subscriptions/subscribes", Config.IncludeRestrictedSubscriptions, Config);
 
 			Log.Debug("Subscriptions: ");
 
