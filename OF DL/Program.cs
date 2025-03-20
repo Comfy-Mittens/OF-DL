@@ -205,7 +205,7 @@ public class Program
 
                         hoconConfig.AppendLine("# Performance Settings");
                         hoconConfig.AppendLine("Performance {");
-                        hoconConfig.AppendLine($"  Timeout = {jsonConfig.Timeout}");
+						hoconConfig.AppendLine($"  Timeout = {(jsonConfig.Timeout.HasValue ? jsonConfig.Timeout.Value : -1)}");
                         hoconConfig.AppendLine($"  LimitDownloadRate = {jsonConfig.LimitDownloadRate.ToString().ToLower()}");
                         hoconConfig.AppendLine($"  DownloadLimitInMbPerSec = {jsonConfig.DownloadLimitInMbPerSec}");
                         hoconConfig.AppendLine("}");
@@ -271,7 +271,7 @@ public class Program
 						DownloadPath = hoconConfig.GetString("Download.DownloadPath"),
 						DownloadOnlySpecificDates = hoconConfig.GetBoolean("Download.DownloadOnlySpecificDates"),
 						DownloadDateSelection = Enum.Parse<DownloadDateSelection>(hoconConfig.GetString("Download.DownloadDateSelection"), true),
-						CustomDate = hoconConfig.GetString("Download.CustomDate") != null ? DateTime.Parse(hoconConfig.GetString("Download.CustomDate")) : null,
+						CustomDate = !string.IsNullOrWhiteSpace(hoconConfig.GetString("Download.CustomDate")) ? DateTime.Parse(hoconConfig.GetString("Download.CustomDate")) : null,
 						ShowScrapeSize = hoconConfig.GetBoolean("Download.ShowScrapeSize"),
 
 						// File Settings
@@ -297,8 +297,8 @@ public class Program
 						NonInteractiveModeListName = hoconConfig.GetString("Interaction.NonInteractiveModeListName"),
 						NonInteractiveModePurchasedTab = hoconConfig.GetBoolean("Interaction.NonInteractiveModePurchasedTab"),
 
-						// Performance Settings
-                        Timeout = hoconConfig.GetInt("Performance.Timeout"),
+                        // Performance Settings
+                        Timeout = string.IsNullOrWhiteSpace(hoconConfig.GetString("Performance.Timeout")) ? -1 : hoconConfig.GetInt("Performance.Timeout"),
                         LimitDownloadRate = hoconConfig.GetBoolean("Performance.LimitDownloadRate"),
 						DownloadLimitInMbPerSec = hoconConfig.GetInt("Performance.DownloadLimitInMbPerSec"),
 
@@ -428,7 +428,7 @@ public class Program
 
                 hoconConfig.AppendLine("# Performance Settings");
                 hoconConfig.AppendLine("Performance {");
-                hoconConfig.AppendLine($"  Timeout = {jsonConfig.Timeout}");
+                hoconConfig.AppendLine($"  Timeout = {(jsonConfig.Timeout.HasValue ? jsonConfig.Timeout.Value : -1)}");
                 hoconConfig.AppendLine($"  LimitDownloadRate = {jsonConfig.LimitDownloadRate.ToString().ToLower()}");
                 hoconConfig.AppendLine($"  DownloadLimitInMbPerSec = {jsonConfig.DownloadLimitInMbPerSec}");
                 hoconConfig.AppendLine("}");
@@ -2869,7 +2869,7 @@ public class Program
 
                         hoconConfig.AppendLine("# Performance Settings");
                         hoconConfig.AppendLine("Performance {");
-                        hoconConfig.AppendLine($"  Timeout = {newConfig.Timeout}");
+                        hoconConfig.AppendLine($"  Timeout = {(newConfig.Timeout.HasValue ? newConfig.Timeout.Value : -1)}");
                         hoconConfig.AppendLine($"  LimitDownloadRate = {newConfig.LimitDownloadRate.ToString().ToLower()}");
                         hoconConfig.AppendLine($"  DownloadLimitInMbPerSec = {newConfig.DownloadLimitInMbPerSec}");
                         hoconConfig.AppendLine("}");
@@ -3020,7 +3020,7 @@ public class Program
 
                         hoconConfig.AppendLine("# Performance Settings");
                         hoconConfig.AppendLine("Performance {");
-                        hoconConfig.AppendLine($"  Timeout = {newConfig.Timeout}");
+                        hoconConfig.AppendLine($"  Timeout = {(newConfig.Timeout.HasValue ? newConfig.Timeout.Value : -1)}");
                         hoconConfig.AppendLine($"  LimitDownloadRate = {newConfig.LimitDownloadRate.ToString().ToLower()}");
                         hoconConfig.AppendLine($"  DownloadLimitInMbPerSec = {newConfig.DownloadLimitInMbPerSec}");
                         hoconConfig.AppendLine("}");
