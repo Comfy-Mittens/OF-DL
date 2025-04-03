@@ -65,8 +65,11 @@ public class Program
 				}
 				else
 				{
-					AnsiConsole.MarkupLine($"[yellow]In the new window that has opened, please log in to your OF account. Do not close the window or tab. Do not navigate away from the page.[/]");
-				}
+                    AnsiConsole.MarkupLine($"[yellow]In the new window that has opened, please log in to your OF account. Do not close the window or tab. Do not navigate away from the page.[/]\n");
+                    AnsiConsole.MarkupLine($"[yellow]Note: Some users have reported that \"Sign in with Google\" has not been working with the new authentication method.[/]");
+                    AnsiConsole.MarkupLine($"[yellow]If you use this method or encounter other issues while logging in, use one of the legacy authentication methods documented here:[/]");
+                    AnsiConsole.MarkupLine($"[link]https://sim0n00ps.github.io/OF-DL/docs/config/auth#legacy-methods[/]");
+                }
 			}
 			auth = await getAuthTask;
 		}
@@ -74,8 +77,8 @@ public class Program
 		{
 			AnsiConsole.MarkupLine($"\n[red]Authentication failed. Be sure to log into to OF using the new window that opened automatically.[/]");
 			AnsiConsole.MarkupLine($"[red]The window will close automatically when the authentication process is finished.[/]");
-			AnsiConsole.MarkupLine($"[red]If the problem persists, you may want to try generating the auth.json file manually or use the browser extension which is documented here:[/]\n");
-			AnsiConsole.MarkupLine($"[link]https://sim0n00ps.github.io/OF-DL/docs/config/auth#browser-extension[/]\n");
+			AnsiConsole.MarkupLine($"[red]If the problem persists, you may want to try using a legacy authentication method documented here:[/]\n");
+			AnsiConsole.MarkupLine($"[link]https://sim0n00ps.github.io/OF-DL/docs/config/auth#legacy-methods[/]\n");
 			AnsiConsole.MarkupLine($"[red]Press any key to exit.[/]");
 			Log.Error(e, "auth invalid after attempt to get auth from browser");
 
@@ -86,8 +89,8 @@ public class Program
 		{
 			AnsiConsole.MarkupLine($"\n[red]Authentication failed. Be sure to log into to OF using the new window that opened automatically.[/]");
 			AnsiConsole.MarkupLine($"[red]The window will close automatically when the authentication process is finished.[/]");
-			AnsiConsole.MarkupLine($"[red]If the problem persists, you may want to try generating the auth.json file manually or use the browser extension which is documented here:[/]\n");
-			AnsiConsole.MarkupLine($"[link]https://sim0n00ps.github.io/OF-DL/docs/config/auth#browser-extension[/]\n");
+			AnsiConsole.MarkupLine($"[red]If the problem persists, you may want to try using a legacy authentication method documented here:[/]\n");
+			AnsiConsole.MarkupLine($"[link]https://sim0n00ps.github.io/OF-DL/docs/config/auth#legacy-methods[/]\n");
 			AnsiConsole.MarkupLine($"[red]Press any key to exit.[/]");
 			Log.Error("auth invalid after attempt to get auth from browser");
 
@@ -306,7 +309,12 @@ public class Program
 						LoggingLevel = Enum.Parse<LoggingLevel>(hoconConfig.GetString("Logging.LoggingLevel"), true)
 					};
 
-					var creatorConfigsSection = hoconConfig.GetConfig("CreatorConfigs");
+                    ValidateFileNameFormat(config.PaidPostFileNameFormat, "PaidPostFileNameFormat");
+                    ValidateFileNameFormat(config.PostFileNameFormat, "PostFileNameFormat");
+                    ValidateFileNameFormat(config.PaidMessageFileNameFormat, "PaidMessageFileNameFormat");
+                    ValidateFileNameFormat(config.MessageFileNameFormat, "MessageFileNameFormat");
+
+                    var creatorConfigsSection = hoconConfig.GetConfig("CreatorConfigs");
                     if (creatorConfigsSection != null)
                     {
                         foreach (var key in creatorConfigsSection.AsEnumerable())
@@ -322,6 +330,11 @@ public class Program
                                     PaidMessageFileNameFormat = creatorHocon.GetString("PaidMessageFileNameFormat"),
                                     MessageFileNameFormat = creatorHocon.GetString("MessageFileNameFormat")
                                 });
+
+                                ValidateFileNameFormat(config.CreatorConfigs[key.Key].PaidPostFileNameFormat, $"{key.Key}.PaidPostFileNameFormat");
+                                ValidateFileNameFormat(config.CreatorConfigs[key.Key].PostFileNameFormat, $"{key.Key}.PostFileNameFormat");
+                                ValidateFileNameFormat(config.CreatorConfigs[key.Key].PaidMessageFileNameFormat, $"{key.Key}.PaidMessageFileNameFormat");
+                                ValidateFileNameFormat(config.CreatorConfigs[key.Key].MessageFileNameFormat, $"{key.Key}.MessageFileNameFormat");
                             }
                         }
                     }
@@ -1014,7 +1027,7 @@ public class Program
 						.ValidationErrorMessage("[red]Please enter a valid message URL[/]")
 						.Validate(url =>
 						{
-							Log.Debug($"Single Message URL: {url}");
+							Log.Debug($"Single Paid Message URL: {url}");
 							Regex regex = new Regex("https://onlyfans\\.com/my/chats/chat/[0-9]+/\\?firstId=[0-9]+$", RegexOptions.IgnoreCase);
 							if (regex.IsMatch(url))
 							{
@@ -2719,7 +2732,7 @@ public class Program
 					break;
 				case "[red]Download Single Post[/]":
 					return (true, new Dictionary<string, int> { { "SinglePost", 0 } }, currentConfig);
-				case "[red]Download Single Message[/]":
+				case "[red]Download Single Paid Message[/]":
 					return (true, new Dictionary<string, int> { { "SingleMessage", 0 } }, currentConfig);
 				case "[red]Download Purchased Tab[/]":
 					return (true, new Dictionary<string, int> { { "PurchasedTab", 0 } }, currentConfig);
@@ -3039,7 +3052,7 @@ public class Program
 						break;
 					}
 					break;
-				case "[red]Logout and exit[/]":
+				case "[red]Logout and Exit[/]":
 					if (Directory.Exists("chrome-data"))
 					{
 						Log.Information("Deleting chrome-data folder");
@@ -3069,7 +3082,7 @@ public class Program
 				"[red]List[/]",
 				"[red]Custom[/]",
 				"[red]Download Single Post[/]",
-				"[red]Download Single Message[/]",
+				"[red]Download Single Paid Message[/]",
 				"[red]Download Purchased Tab[/]",
 				"[red]Edit config.conf[/]",
 				"[red]Change logging level[/]",
@@ -3084,7 +3097,7 @@ public class Program
 				"[red]Select All[/]",
 				"[red]Custom[/]",
 				"[red]Download Single Post[/]",
-				"[red]Download Single Message[/]",
+				"[red]Download Single Paid Message[/]",
 				"[red]Download Purchased Tab[/]",
 				"[red]Edit config.conf[/]",
 				"[red]Change logging level[/]",
@@ -3178,4 +3191,15 @@ public class Program
 			File.WriteAllText("auth.json", newAuthString);
 		}
 	}
+
+    public static void ValidateFileNameFormat(string? format, string settingName)
+    {
+        if(!string.IsNullOrEmpty(format) && !format.Contains("{mediaId}", StringComparison.OrdinalIgnoreCase) && !format.Contains("{filename}", StringComparison.OrdinalIgnoreCase))
+        {
+            AnsiConsole.Markup($"[red]{settingName} is not unique enough, please make sure you include either '{{mediaId}}' or '{{filename}}' to ensure that files are not overwritten with the same filename.[/]\n");
+            AnsiConsole.Markup("[red]Press any key to continue.[/]\n");
+            Console.ReadKey();
+            Environment.Exit(2);
+        }
+    }
 }
