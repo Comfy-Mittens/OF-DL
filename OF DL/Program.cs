@@ -793,11 +793,20 @@ public class Program
 
 		Log.Debug("Calling DownloadAllData");
 
-		do
-		{
-			DateTime startTime = DateTime.Now;
-			Dictionary<string, int> users = new();
-			Dictionary<string, int> activeSubs = await m_ApiHelper.GetActiveSubscriptions("/subscriptions/subscribes", Config.IncludeRestrictedSubscriptions, Config);
+        do
+        {
+            DateTime startTime = DateTime.Now;
+            Dictionary<string, int> users = new();
+            var activeSubbed = await m_ApiHelper.GetActiveSubscribed("/subscriptions/subscribes", Config.IncludeRestrictedSubscriptions, Config);
+            var activeSubs = activeSubbed?.ToDictionary(e => e.Key, e => e.Value.id);
+            {
+                if (Directory.Exists(Config.DownloadPath) && activeSubbed != null)
+                {
+                    var reportPath = Path.Combine(Config.DownloadPath, "Report.csv");
+                    var report = new Reporting(activeSubbed?.Values);
+                    report.GenerateReport(reportPath);
+                }
+            }
 
 			Log.Debug("Subscriptions: ");
 
